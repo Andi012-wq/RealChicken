@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <title>Restoranti Premium</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background-color: #f7f4ef;
+    }
+    header {
+      background-color: #8B4513;
+      color: white;
+      text-align: center;
+      padding: 20px;
+      font-size: 28px;
+    }
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      padding: 20px;
+    }
+    .category {
+      background-color: white;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      flex: 1 1 300px;
+      padding: 15px;
+    }
+    .category h2 {
+      background-color: #8B4513;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 0;
+    }
+    .items {
+      display: none;
+      margin-top: 10px;
+    }
+    .items.show {
+      display: block;
+    }
+    .item {
+      padding: 10px;
+      border-bottom: 1px dashed #ccc;
+      cursor: pointer;
+    }
+    .item:hover {
+      background-color: #ffe;
+    }
+    .cart {
+      position: fixed;
+      top: 80px;
+      right: 0;
+      width: 300px;
+      background: white;
+      border-left: 3px solid #8B4513;
+      padding: 15px;
+      height: calc(100% - 80px);
+      overflow-y: auto;
+    }
+    .cart h3 {
+      margin-top: 0;
+    }
+    .order-item {
+      margin: 5px 0;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .remove-btn {
+      margin-left: 10px;
+      color: red;
+      cursor: pointer;
+      user-select: none;
+    }
+    .total {
+      margin-top: 10px;
+      font-weight: bold;
+      font-size: 18px;
+      color: #8B0000;
+    }
+    .footer {
+      background-color: #ddd;
+      padding: 15px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 18px;
+      margin-top: 20px;
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #invoiceList {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 10px;
+      padding: 10px;
+      background: #fff8dc;
+      border: 1px solid #8B4513;
+      border-radius: 8px;
+    }
+    .invoice {
+      border-bottom: 1px dashed #8B4513;
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+    }
+    .invoice-header {
+      font-weight: bold;
+      color: #8B4513;
+      margin-bottom: 5px;
+    }
+    .invoice-items {
+      margin-left: 15px;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+    .invoice-total {
+      font-weight: bold;
+      color: #b22222;
+      font-size: 15px;
+    }
+    #btnSendInvoice, #btnClearProfit {
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: #8B4513;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 16px;
+    }
+    #btnSendInvoice:hover, #btnClearProfit:hover {
+      background: #a0522d;
+    }
+
+    @media (max-width: 700px) {
+      .container {
+        flex-direction: column;
+      }
+      .cart {
+        position: static;
+        width: auto;
+        height: auto;
+        border-left: none;
+        border-top: 3px solid #8B4513;
+        margin: 0 20px 20px 20px;
+      }
+      .footer {
+        position: static;
+        width: auto;
+      }
+    }
+    @media (max-width: 700px) {
+  body {
+    padding: 10px;
+  }
+
+  header {
+    font-size: 22px;
+    padding: 15px 10px;
+  }
+
+  .container {
+    flex-direction: column;
+    padding: 10px;
+  }
+
+  .category {
+    flex: 1 1 100%;
+    margin-bottom: 15px;
+  }
+
+  .cart {
+    position: static;
+    width: auto;
+    height: auto;
+    border-left: none;
+    border-top: 3px solid #8B4513;
+    margin: 0 10px 20px 10px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+  }
+
+  .order-item {
+    font-size: 16px;
+  }
+
+  #btnSendInvoice, #btnClearProfit {
+    font-size: 18px;
+  }
+
+  .footer {
+    position: static;
+    width: 100%;
+    font-size: 16px;
+    padding: 10px 0;
+  }
+}
+  </style>
+</head>
+<body>
+
+<header>☕ Restoranti Premium 🍕</header>
+
+<div class="container" id="menuContainer"></div>
+
+<div class="cart">
+  <h3>🛒 Porositë:</h3>
+  <div id="cartItems"></div>
+  <div class="total" id="cartTotal">Totali: 0.00€</div>
+  <button id="btnSendInvoice">Dërgo në fitim ditor</button>
+  <button id="btnClearProfit">Fshije Fitimin Ditor</button>
+  <div id="dailyProfit" style="margin-top:15px; font-weight:bold; color:#8B0000;">Fitimi ditor: 0.00€</div>
+  <div id="invoiceList"></div>
+</div>
+
+<script>
+  const categories = [
+    {
+      name: "Peshk",
+      items: [
+        {name:"Salmon me Limone",price:9.00},{name:"Peshk në Skarë",price:8.00},
+        {name:"Fileto Merluci",price:8.50},{name:"Kallamarë të Skuqur",price:7.90},{name:"Levreke",price:9.20},
+        {name:"Shprot i pjekur",price:6.50},{name:"Sardelet e marinuara",price:6.00},{name:"Peshk me majdanoz",price:7.10},
+        {name:"Rreth peshkut",price:8.30},{name:"Peshk në furre",price:8.80},{name:"Kalamare me limon",price:7.40},
+        {name:"Fileto troftë",price:7.60},{name:"Peshk fileto i thekur",price:8.10},{name:"Peshk me karrota",price:7.00},
+        {name:"Peshk me salcë të kuqe",price:7.50},{name:"Fileto salmon i freskët",price:9.30},{name:"Peshk me salcë limoni",price:7.80},
+        {name:"Peshk me hudhër",price:7.70},{name:"Peshk i skarë me erëza",price:8.20}
+      ]
+    },
+    {
+      name: "Embëlsira",
+      items: [
+        {name:"Tiramisu",price:3.00},{name:"Bakllava",price:2.00},{name:"Cheesecake",price:3.50},
+        {name:"Torte Çokollatë",price:3.20},{name:"Panna Cotta",price:2.80},{name:"Gelato",price:3.10},
+        {name:"Profiterol",price:3.60},{name:"Krem karamel",price:2.90},{name:"Mousse çokollate",price:3.40},
+        {name:"Petulla me mjaltë",price:2.50},{name:"Kek me arra",price:3.70},{name:"Biskota",price:2.20},
+        {name:"Sufllaqe",price:3.00},{name:"Qumësht me mjaltë",price:2.80},{name:"Sorbet limoni",price:2.90},
+        {name:"Trileçe",price:3.20},{name:"Kulfi",price:3.30},{name:"Krepa me çokollatë",price:3.50},
+        {name:"Rulada me fruta",price:3.10},{name:"Kroasan",price:2.80}
+      ]
+    },
+    {
+      name: "Mish",
+      items: [
+        {name:"Biftek viçi",price:10.00},{name:"Qengj i pjekur",price:9.50},{name:"Pula në furrë",price:7.00},
+        {name:"Mish derri me patate",price:8.50},{name:"Fileto pule",price:7.80},{name:"Fërgesë viçi",price:8.90},
+        {name:"Qofte viçi",price:8.00},{name:"Mish i pjekur me barishte",price:9.00},{name:"Pulë me salcë speca",price:7.20},
+        {name:"Mish pule me hudhër",price:7.50},{name:"Biftek i skarë",price:10.50},{name:"Ragù viçi",price:9.30},
+        {name:"Qengj me rigon",price:9.60},{name:"Mish derri me mollë",price:8.20},{name:"Fileto qengji",price:9.80},
+        {name:"Pula me limon",price:7.40},{name:"Mish pule me qepë",price:7.00},{name:"Mish viçi me kerpudha",price:9.50},
+        {name:"Pulë me patate",price:7.20},{name:"Mish viçi me speca",price:8.80}
+      ]
+    },
+    {
+      name: "Gjellëra",
+      items: [
+        {name:"Pasul",price:3.00},{name:"Gjellë me patate",price:3.50},{name:"Musakë",price:4.00},
+        {name:"Speca të mbushur",price:4.20},{name:"Lakror",price:3.90},{name:"Tavë kosi",price:4.80},
+        {name:"Sallatë me oriz",price:3.90},{name:"Petulla",price:2.80},{name:"Makarona me gjellë",price:3.40},
+        {name:"Fërgesë me speca",price:4.10},{name:"Qebapa",price:4.50},{name:"Speca të skuqur",price:4.30},
+        {name:"Byrek me perime",price:3.70},{name:"Mish me fasule",price:4.60},{name:"Fërgesë me mish",price:5.00},
+        {name:"Tavë me patate",price:4.90},{name:"Qofte me oriz",price:4.50},{name:"Gjellë me mish pule",price:4.80},
+        {name:"Speca të mbushur me mish",price:4.90},{name:"Lakër turshi",price:3.10}
+      ]
+    },
+    {
+      name: "Ushqime Tradicionale",
+      items: [
+        {name:"Flia",price:4.50},{name:"Pite me spinaq",price:3.80},{name:"Tava Elbasani",price:6.50},
+        {name:"Byrek me djathë",price:3.20},{name:"Fërgesë me mish",price:5.50},{name:"Qofte",price:4.70},
+        {name:"Trahanas",price:4.00},{name:"Lakror",price:3.90},{name:"Gjellë me fasule",price:4.60},
+        {name:"Krap me oriz",price:6.20},{name:"Sallatë me fasule",price:3.50},{name:"Petulla me mjaltë",price:2.50},
+        {name:"Lakër turshi",price:3.10},{name:"Tavë me mish",price:5.90},{name:"Mish i pjekur me erëza",price:6.00},
+        {name:"Pite me mish",price:4.30},{name:"Speca të mbushur me oriz",price:4.20},{name:"Peshk i pjekur",price:7.80},
+        {name:"Qofte me mish derri",price:5.50},{name:"Sallatë me pulë",price:3.80}
+      ]
+    },
+    {
+      name: "Pije Freskuese",
+      items: [
+        {name:"Coca-Cola",price:1.50},{name:"Fanta",price:1.50},{name:"Sprite",price:1.50},
+        {name:"Ujë i gazuar",price:1.00},{name:"Ujë pa gaz",price:1.00},{name:"Lëng portokalli",price:2.00},
+        {name:"Lëng molla",price:2.00},{name:"Lëng limoni",price:2.00},{name:"Lëng qershi",price:2.00},
+        {name:"Birrë e ftohtë",price:2.50},{name:"Ujë mineral",price:1.20},{name:"Lëng ananasi",price:2.30},
+        {name:"Lëng rrushi",price:2.10},{name:"Lëng pjeshke",price:2.00},{name:"Lëng panxhari",price:2.20},
+        {name:"Lëng karote",price:2.00},{name:"Lëng shege",price:2.50},{name:"Lëng mollë jeshile",price:2.30},
+        {name:"Lëng kivi",price:2.40},{name:"Lëng dardhe",price:2.10}
+      ]
+    },
+    {
+      name: "Salata",
+      items: [
+        {name:"Salatë Greke",price:2.50},{name:"Salatë jeshile",price:2.00},{name:"Salatë me domate dhe kastravec",price:2.00},
+        {name:"Salatë me qepë",price:2.20},{name:"Salatë me karrota",price:2.10},{name:"Salatë me misër",price:2.30},
+        {name:"Salatë me avokado",price:3.00},{name:"Salatë Cezar",price:3.50},{name:"Salatë Nicoise",price:3.80},
+        {name:"Salatë me rukola",price:2.90},{name:"Salatë me kungull",price:2.70},{name:"Salatë me kastravec dhe luleshtrydhe",price:2.90},
+        {name:"Salatë me bizele",price:2.40},{name:"Salatë me borzilok",price:2.50},{name:"Salatë me panxhar",price:2.80},
+        {name:"Salatë me qiqra",price:2.70},{name:"Salatë me karrota dhe kungull",price:2.60},{name:"Salatë me majdanoz",price:2.20},
+        {name:"Salatë me majdanoz dhe hudhër",price:2.30},{name:"Salatë me selino",price:2.10}
+      ]
+    },
+    {
+      name: "Pasta",
+      items: [
+        {name:"Spaghetti Bolognese",price:6.00},{name:"Penne Arrabiata",price:5.50},{name:"Fettuccine Alfredo",price:6.50},
+        {name:"Lasagna",price:7.00},{name:"Ravioli",price:6.80},{name:"Tortellini",price:7.20},{name:"Tagliatelle",price:6.90},
+        {name:"Gnocchi",price:6.50},{name:"Fusilli",price:5.80},{name:"Pasta me pesto",price:6.00},{name:"Pasta me kungull",price:5.90},
+        {name:"Pasta me salmon",price:7.50},{name:"Pasta me kungull dhe domate",price:6.40},{name:"Pasta me mish pule",price:7.10},
+        {name:"Pasta me qepë",price:5.70},{name:"Pasta me brokoli",price:6.20},{name:"Pasta me kungull dhe arrë",price:6.00},
+        {name:"Pasta me djathë",price:5.50},{name:"Pasta me domate të freskëta",price:5.80},{name:"Pasta me salcë kosi",price:6.10}
+      ]
+    },
+    {
+      name: "Sanduiçe",
+      items: [
+        {name:"Sanduiç me ton",price:3.00},{name:"Sanduiç me gjoks pule",price:3.50},{name:"Sanduiç vege",price:3.00},
+        {name:"Sanduiç me djathë",price:3.20},{name:"Sanduiç me domate",price:3.10},{name:"Sanduiç me perime",price:3.30},
+        {name:"Sanduiç me mish pule",price:3.50},{name:"Sanduiç me peshk",price:3.80},{name:"Sanduiç me vezë",price:3.20},
+        {name:"Sanduiç me avokado",price:3.60},{name:"Sanduiç me sallatë",price:3.40},{name:"Sanduiç me speca",price:3.10},
+        {name:"Sanduiç me karkaleca",price:4.00},{name:"Sanduiç me salcë",price:3.30},{name:"Sanduiç me proshutë",price:3.80},
+        {name:"Sanduiç me qepë",price:3.20},{name:"Sanduiç me majdanoz",price:3.10},{name:"Sanduiç me kungull",price:3.00},
+        {name:"Sanduiç me speca të skuqur",price:3.50},{name:"Sanduiç vege me djathë",price:3.40}
+      ]
+    },
+    {
+      name: "Pije të Nxehëta",
+      items: [
+        {name:"Çaj Mali",price:1.20},{name:"Çaj Limoni",price:1.20},{name:"Qokollatë e nxehtë",price:2.00},
+        {name:"Çaj me mente",price:1.50},{name:"Çaj Oolong",price:1.70},{name:"Çaj Earl Grey",price:1.80},
+        {name:"Çaj me kanellë",price:1.50},{name:"Çaj me limon dhe mjaltë",price:1.60},{name:"Qokollatë me krem",price:2.20},
+        {name:"Qokollatë me shkop kanelle",price:2.10},{name:"Çaj me xhenxhefil dhe limon",price:1.70},{name:"Çaj me mjaltë",price:1.50},
+        {name:"Çaj me gjethe mente",price:1.60},{name:"Çaj me trëndafil dhe mente",price:1.70},{name:"Qokollatë me kanellë",price:2.30},
+        {name:"Qokollatë me bajame",price:2.50}
+      ]
+    },
+    {
+      name: "Kafe",
+      items: [
+        {name:"Espresso",price:1.20},{name:"Macchiato",price:1.50},{name:"Cappuccino",price:1.80},
+        {name:"Latte",price:2.00},{name:"Kafe Turke",price:1.00},{name:"Kafe me Qumësht",price:1.70},
+        {name:"Americano",price:1.40},{name:"Ristretto",price:1.30},{name:"Frappe",price:2.20},
+        {name:"Kafe Akull",price:2.30},{name:"Kafe me Vanilje",price:2.50},{name:"Kafe me Kanellë",price:2.60},
+        {name:"Kafe me Çokollatë",price:2.70},{name:"Kafe me Bajame",price:2.80},{name:"Kafe me Arra",price:2.90},
+        {name:"Kafe me Lëng Portokalli",price:2.40},{name:"Kafe me Qershi",price:2.30},{name:"Kafe me Karamel",price:2.50},
+        {name:"Kafe me Xhenxhefil",price:2.60},{name:"Kafe me Mjaltë",price:2.40}
+      ]
+    },
+    {
+      name: "Hamburger",
+      items: [
+        {name:"Classic Burger",price:3.50},{name:"Cheeseburger",price:4.00},{name:"Double Burger",price:5.00},
+        {name:"Chicken Burger",price:4.50},{name:"Spicy Burger",price:4.80},{name:"Veggie Burger",price:4.00},
+        {name:"BBQ Burger",price:5.50},{name:"Bacon Burger",price:5.80},{name:"Mushroom Burger",price:5.20},
+        {name:"Fish Burger",price:5.10},{name:"Avocado Burger",price:4.90},{name:"Breakfast Burger",price:4.70},
+        {name:"Texas Burger",price:5.60},{name:"Hawaiian Burger",price:5.50},{name:"Chili Burger",price:5.00},
+        {name:"Swiss Burger",price:5.40},{name:"Blue Cheese Burger",price:5.70},{name:"Jalapeno Burger",price:5.20},
+        {name:"BBQ Bacon Burger",price:6.00},{name:"Veggie Deluxe Burger",price:5.80}
+      ]
+    },
+    {
+      name: "Pizza",
+      items: [
+        {name:"Pizza Margherita",price:5.00},{name:"Pizza Pepperoni",price:6.00},{name:"Pizza Vegetariana",price:5.50},
+        {name:"Pizza Tonno",price:6.50},{name:"Pizza 4 Stinët",price:7.00},{name:"Pizza BBQ",price:7.50},
+        {name:"Pizza Capricciosa",price:6.80},{name:"Pizza Picante",price:6.70},{name:"Pizza Funghi",price:6.30},
+        {name:"Pizza Hawaiiana",price:7.20},{name:"Pizza Prosciutto",price:7.00},{name:"Pizza Quattro Formaggi",price:7.50},
+        {name:"Pizza Diavola",price:7.10},{name:"Pizza Calzone",price:6.90},{name:"Pizza Napolitana",price:6.80},
+        {name:"Pizza Romana",price:6.70},{name:"Pizza Siciliana",price:7.00},{name:"Pizza Vegetale",price:5.80},
+        {name:"Pizza Salsiccia",price:7.20},{name:"Pizza Bianca",price:6.50}
+      ]
+    }
+  ];
+
+  let order = [];
+  let invoices = JSON.parse(localStorage.getItem("invoices")) || [];
+  let dailyProfit = parseFloat(localStorage.getItem("dailyProfit")) || 0;
+
+  function renderMenu() {
+    const container = document.getElementById("menuContainer");
+    container.innerHTML = "";
+
+    categories.forEach(category => {
+      const catDiv = document.createElement("div");
+      catDiv.className = "category";
+
+      const title = document.createElement("h2");
+      title.textContent = category.name;
+      title.onclick = () => {
+        itemsDiv.classList.toggle("show");
+      };
+      catDiv.appendChild(title);
+
+      const itemsDiv = document.createElement("div");
+      itemsDiv.className = "items";
+
+      category.items.forEach(item => {
+        const itemDiv = document.createElement("div");
+        itemDiv.className = "item";
+        itemDiv.textContent = `${item.name} - ${item.price.toFixed(2)}€`;
+        itemDiv.onclick = () => addToOrder(item);
+        itemsDiv.appendChild(itemDiv);
+      });
+
+      catDiv.appendChild(itemsDiv);
+      container.appendChild(catDiv);
+    });
+  }
+
+  function addToOrder(item) {
+    order.push(item);
+    updateCart();
+  }
+
+  function updateCart() {
+    const cartItems = document.getElementById("cartItems");
+    const cartTotal = document.getElementById("cartTotal");
+
+    cartItems.innerHTML = "";
+    let total = 0;
+
+    order.forEach((item, index) => {
+      total += item.price;
+
+      const div = document.createElement("div");
+      div.className = "order-item";
+      div.textContent = `${item.name} - ${item.price.toFixed(2)}€`;
+
+      const btnRemove = document.createElement("span");
+      btnRemove.textContent = "🗑️";
+      btnRemove.className = "remove-btn";
+      btnRemove.title = "Hiq artikullin";
+      btnRemove.onclick = (e) => {
+        e.stopPropagation();
+        removeFromOrder(index);
+      };
+
+      div.appendChild(btnRemove);
+      cartItems.appendChild(div);
+    });
+
+    cartTotal.textContent = `Totali: ${total.toFixed(2)}€`;
+  }
+
+  function removeFromOrder(index) {
+    order.splice(index, 1);
+    updateCart();
+  }
+
+  function sendInvoice() {
+    if (order.length === 0) {
+      alert("Nuk ka artikuj në porosi për të dërguar.");
+      return;
+    }
+
+    const invoice = {
+      id: Date.now(),
+      items: [...order],
+      total: order.reduce((acc, it) => acc + it.price, 0),
+      date: new Date().toLocaleString()
+    };
+
+    invoices.push(invoice);
+    localStorage.setItem("invoices", JSON.stringify(invoices));
+
+    dailyProfit += invoice.total;
+    localStorage.setItem("dailyProfit", dailyProfit.toFixed(2));
+
+    order = [];
+    updateCart();
+    renderInvoices();
+  }
+
+  function renderInvoices() {
+    const invoiceList = document.getElementById("invoiceList");
+    const dailyProfitElem = document.getElementById("dailyProfit");
+
+    if (invoices.length === 0) {
+      invoiceList.textContent = "Nuk ka fatura të dërguara.";
+      dailyProfitElem.textContent = "Fitimi ditor: 0.00€";
+      return;
+    }
+
+    invoiceList.innerHTML = "";
+
+    invoices.forEach(inv => {
+      const invDiv = document.createElement("div");
+      invDiv.className = "invoice";
+
+      const header = document.createElement("div");
+      header.className = "invoice-header";
+      header.textContent = `Fatura Nr: ${inv.id} - ${inv.date}`;
+
+      const itemsDiv = document.createElement("div");
+      itemsDiv.className = "invoice-items";
+      inv.items.forEach(item => {
+        const itemLine = document.createElement("div");
+        itemLine.textContent = `• ${item.name} - ${item.price.toFixed(2)}€`;
+        itemsDiv.appendChild(itemLine);
+      });
+
+      const totalDiv = document.createElement("div");
+      totalDiv.className = "invoice-total";
+      totalDiv.textContent = `Totali i faturës: ${inv.total.toFixed(2)}€`;
+
+      invDiv.appendChild(header);
+      invDiv.appendChild(itemsDiv);
+      invDiv.appendChild(totalDiv);
+
+      invoiceList.appendChild(invDiv);
+    });
+
+    dailyProfitElem.textContent = `Fitimi ditor: ${dailyProfit.toFixed(2)}€`;
+  }
+
+  function clearDailyProfit() {
+    if (confirm("A jeni i sigurt që doni të fshini fitimin ditor dhe faturat?")) {
+      invoices = [];
+      dailyProfit = 0;
+      localStorage.removeItem("invoices");
+      localStorage.removeItem("dailyProfit");
+      renderInvoices();
+    }
+  }
+
+  window.onload = () => {
+    renderMenu();
+    renderInvoices();
+    updateCart();
+
+    document.getElementById("btnSendInvoice").onclick = sendInvoice;
+    document.getElementById("btnClearProfit").onclick = clearDailyProfit;
+  };
+</script>
+
+</body>
+</html>
